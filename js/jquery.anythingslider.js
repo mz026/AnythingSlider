@@ -1,5 +1,5 @@
 /*!
-	AnythingSlider v1.8.3
+	AnythingSlider v1.8.4
 	Original by Chris Coyier: http://css-tricks.com
 	Get the latest version: https://github.com/ProLoser/AnythingSlider
 
@@ -47,9 +47,16 @@
 			base.win = window;
 			base.$win = $(base.win);
 
-			base.$controls = $('<div class="anythingControls"></div>').appendTo( (o.appendControlsTo && $(o.appendControlsTo).length) ? $(o.appendControlsTo) : base.$wrapper);
-			base.$nav = $('<ul class="thumbNav"><li><a><span></span></a></li></ul>').appendTo( (o.appendNavigationTo && $(o.appendNavigationTo).length) ? $(o.appendNavigationTo) : base.$controls );
+			base.$controls = $('<div class="anythingControls"></div>');
+			base.$nav = $('<ul class="thumbNav"><li><a><span></span></a></li></ul>');
 			base.$startStop = $('<a href="#" class="start-stop"></a>');
+			
+			if (o.buildStartStop || o.buildNavigation) {
+				base.$controls.appendTo( (o.appendControlsTo && $(o.appendControlsTo).length) ? $(o.appendControlsTo) : base.$wrapper);
+			}
+			if (o.buildNavigation) {
+				base.$nav.appendTo( (o.appendNavigationTo && $(o.appendNavigationTo).length) ? $(o.appendNavigationTo) : base.$controls );
+			}
 			if (o.buildStartStop) {
 				base.$startStop.appendTo( (o.appendStartStopTo && $(o.appendStartStopTo).length) ? $(o.appendStartStopTo) : base.$controls );
 			}
@@ -624,7 +631,7 @@
 			if (page < base.adj ) { page = 1; }
 
 			// hide/show arrows based on infinite scroll mode
-			if (!o.infiniteSlides && o.stopAtEnd){
+			if (o.buildArrows && !o.infiniteSlides && o.stopAtEnd){
 				base.$forward[ page === base.pages ? 'addClass' : 'removeClass']('disabled');
 				base.$back[ page === 1 ? 'addClass' : 'removeClass']('disabled');
 				if (page === base.pages && base.playing) { base.startStop(); }
