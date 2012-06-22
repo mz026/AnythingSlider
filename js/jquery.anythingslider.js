@@ -1,5 +1,5 @@
 /*!
-	AnythingSlider v1.8.5
+	AnythingSlider v1.8.6
 	Original by Chris Coyier: http://css-tricks.com
 	Get the latest version: https://github.com/ProLoser/AnythingSlider
 
@@ -269,9 +269,15 @@
 			base.$nav.find('a').eq(base.currentPage - 1).addClass('cur'); // update current selection
 
 			if (o.mode === 'fade') {
-				base.$items
-					.eq(base.currentPage-1).css({ opacity: 1 })
-					.siblings().css({ opacity: 0 });
+				var t = base.$items.eq(base.currentPage-1);
+				if (o.resumeOnVisible) {
+					// prevent display: none;
+					t.css({ opacity: 1 }).siblings().css({ opacity: 0 });
+				} else {
+					// allow display: none; - resets video
+					base.$items.css('opacity',1);
+					t.fadeIn(0).siblings().fadeOut(0);
+				}
 			}
 
 		};
@@ -550,10 +556,10 @@
 			if (page < base.adj ) { page = (!o.infiniteSlides && !o.stopAtEnd) ? base.pages : 1; }
 			if (!o.infiniteSlides) { base.exactPage = page; } // exact page used by the fx extension
 			base.currentPage = ( page > base.pages ) ? base.pages : ( page < 1 ) ? 1 : base.currentPage;
-			base.$currentPage = base.$items.removeClass('activePage').eq(base.currentPage - base.adj);
+			base.$currentPage = base.$items.eq(base.currentPage - base.adj);
 			base.targetPage = (page === 0) ? base.pages : (page > base.pages) ? 1 : page;
 			base.$targetPage = base.$items.eq(base.targetPage - base.adj);
-			time = time || o.animationTime;
+			time = typeof time !== 'undefined' ? time : o.animationTime;
 			// don't trigger events when time < 0 - to prevent FX from firing multiple times on page resize
 			if (time >= 0) { base.$el.trigger('slide_init', base); }
 			// toggle arrows/controls only if there is time to see it - fix issue #317
@@ -592,8 +598,8 @@
 
 				if (o.mode === 'fade') {
 					if (base.$lastPage[0] !== base.$targetPage[0]) {
-						base.$lastPage.filter(':not(:animated)').fadeTo((time < 0 ? 0 : time), 0);
-						base.$targetPage.filter(':not(:animated)').fadeTo((time < 0 ? 0 : time), 1, function(){ base.endAnimation(page, callback, time); });
+						base.fadeIt( base.$lastPage, 0, time );
+						base.fadeIt( base.$targetPage, 1, time, function(){ base.endAnimation(page, callback, time); });
 					} else {
 						base.endAnimation(page, callback, time);
 					}
@@ -602,7 +608,7 @@
 					d[base.dir] = -base.panelSize[(o.infiniteSlides && base.pages > 1) ? page : page - 1][2];
 					// Animate Slider
 					base.$el.filter(':not(:animated)').animate(
-						d, { queue: false, duration: time, easing: o.easing, complete: function(){ base.endAnimation(page, callback, time); } }
+						d, { queue: false, duration: time < 0 ? 0 : time, easing: o.easing, complete: function(){ base.endAnimation(page, callback, time); } }
 					);
 				}
 			}, parseInt(o.delayBeforeAnimate, 10) || 0);
@@ -622,7 +628,7 @@
 
 			if (o.mode === 'fade') {
 				// make sure non current panels are hidden (rapid slide changes)
-				base.$items.not(':eq(' + (page - base.adj) + ')').css('opacity', 0);
+				base.fadeIt( base.$items.not(':eq(' + (page - base.adj) + ')'), 0, 0);
 			}
 
 			if (!base.hovered) { base.slideControls(false); }
@@ -639,6 +645,15 @@
 					base.startStop(true);
 				// subtract out slide delay as the slideshow waits that additional time.
 				}, o.resumeDelay - (o.autoPlayDelayed ? o.delay : 0));
+			}
+		};
+
+		base.fadeIt = function(el, toOpacity, time, callback){
+			var t = time < 0 ? 0 : time;
+			if (o.resumeOnVisible) {
+				el.filter(':not(:animated)').fadeTo(t, toOpacity, callback);
+			} else {
+				el.filter(':not(:animated)')[ toOpacity === 0 ? 'fadeOut' : 'fadeIn' ](t, callback);
 			}
 		};
 
