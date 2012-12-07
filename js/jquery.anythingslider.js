@@ -1,5 +1,5 @@
 /*!
-	AnythingSlider v1.8.6
+	AnythingSlider v1.8.7
 	Original by Chris Coyier: http://css-tricks.com
 	Get the latest version: https://github.com/CSS-Tricks/AnythingSlider
 
@@ -14,8 +14,9 @@
 		return "Panel #" + index; // This would have each tab with the text 'Panel #X' where X = index
 	}
 */
-;(function($) {
-
+/*jshint browser:true, jquery:true, unused:false */
+;(function($, win, doc) {
+	"use strict";
 	$.anythingSlider = function(el, options) {
 
 		var base = this, o, t;
@@ -43,8 +44,9 @@
 			// base.$el = original ul
 			// for wrap - get parent() then closest in case the ul has "anythingSlider" class
 			base.$wrapper = base.$el.parent().closest('div.anythingSlider').addClass('anythingSlider-' + o.theme);
+			base.$outer = base.$wrapper.parent();
 			base.$window = base.$el.closest('div.anythingWindow');
-			base.win = window;
+			base.win = win;
 			base.$win = $(base.win);
 
 			base.$controls = $('<div class="anythingControls"></div>');
@@ -63,11 +65,13 @@
 
 			// Figure out how many sliders are on the page for indexing
 			base.runTimes = $('.anythingBase').length;
-			base.regex = new RegExp('panel' + base.runTimes + '-(\\d+)', 'i'); // hash tag regex
+			// hash tag regex - fixes issue #432
+			base.regex = (o.hashTags) ? new RegExp('panel' + base.runTimes + '-(\\d+)', 'i') : null;
 			if (base.runTimes === 1) { base.makeActive(); } // make the first slider on the page active
 
 			// Set up a few defaults & get details
 			base.flag    = false; // event flag to prevent multiple calls (used in control click/focusin)
+			if (o.autoPlayLocked) { o.autoPlay = true; } // if autoplay is locked, start playing
 			base.playing = o.autoPlay; // slideshow state; removed "startStopped" option
 			base.slideshow = false; // slideshow flag needed to correctly trigger slideshow events
 			base.hovered = false; // actively hovering over the slider
@@ -86,17 +90,7 @@
 
 			base.adj = (o.infiniteSlides) ? 0 : 1; // adjust page limits for infinite or limited modes
 			base.adjustMultiple = 0;
-			base.width = base.$el.width();
-			base.height = base.$el.height();
-			base.outerPad = [ base.$wrapper.innerWidth() - base.$wrapper.width(), base.$wrapper.innerHeight() - base.$wrapper.height() ];
 			if (o.playRtl) { base.$wrapper.addClass('rtl'); }
-
-			// Expand slider to fit parent
-			if (o.expand) {
-				base.$outer = base.$wrapper.parent();
-				base.$window.css({ width: '100%', height: '100%' }); // needed for Opera
-				base.checkResize();
-			}
 
 			// Build start/stop button
 			if (o.buildStartStop) { base.buildAutoPlay(); }
@@ -104,12 +98,15 @@
 			// Build forwards/backwards buttons
 			if (o.buildArrows) { base.buildNextBackButtons(); }
 
-			// can't lock autoplay it if it's not enabled
-			if (!o.autoPlay) { o.autoPlayLocked = false; }
-
 			base.$lastPage = base.$targetPage = base.$currentPage;
 
 			base.updateSlider();
+
+			// Expand slider to fit parent
+			if (o.expand) {
+				base.$window.css({ width: '100%', height: '100%' }); // needed for Opera
+				base.checkResize();
+			}
 
 			// Make sure easing function exists.
 			if (!$.isFunction($.easing[o.easing])) { o.easing = "swing"; }
@@ -139,7 +136,7 @@
 			});
 
 			// Add keyboard navigation
-			$(document).keyup(function(e){
+			$(doc).keyup(function(e){
 				// Stop arrow keys from working when focused on form items
 				if (o.enableKeyboard && base.$wrapper.hasClass('activeSlider') && !e.target.tagName.match('TEXTAREA|INPUT|SELECT')) {
 					if (o.mode !== 'vertical' && (e.which === 38 || e.which === 40)) { return; }
@@ -198,7 +195,7 @@
 			// Fix tabbing through the page, but don't change the view if the link is in view (showMultiple = true)
 			base.$items.find('a').unbind('focus.AnythingSlider').bind('focus.AnythingSlider', function(e){
 				var panel = $(this).closest('.panel'),
-				 indx = base.$items.index(panel) + base.adj; // index can be -1 in nested sliders - issue #208
+					indx = base.$items.index(panel) + base.adj; // index can be -1 in nested sliders - issue #208
 				base.$items.find('.focusedLink').removeClass('focusedLink');
 				$(this).addClass('focusedLink');
 				base.$window.scrollLeft(0).scrollTop(0);
@@ -392,7 +389,7 @@
 			});
 			// using tab to get to arrow links will show they have focus (outline is disabled in css)
 			base.$back.add(base.$forward).find('a').bind('focusin focusout',function(){
-			 $(this).toggleClass('hover');
+				$(this).toggleClass('hover');
 			});
 
 			// Append elements to page
@@ -443,13 +440,20 @@
 
 		// Set panel dimensions to either resize content or adjust panel to content
 		base.setDimensions = function(){
+
+			// reset element width & height
+			base.$wrapper.find('.anythingWindow, .anythingBase, .panel').andSelf().css({ width: '', height: '' });
+			base.width = base.$el.width();
+			base.height = base.$el.height();
+			base.outerPad = [ base.$wrapper.innerWidth() - base.$wrapper.width(), base.$wrapper.innerHeight() - base.$wrapper.height() ];
+
 			var w, h, c, t, edge = 0,
 				fullsize = { width: '100%', height: '100%' },
 				// determine panel width
 				pw = (o.showMultiple > 1) ? base.width || base.$window.width()/o.showMultiple : base.$window.width(),
 				winw = base.$win.width();
 			if (o.expand){
-				w = base.$outer.width() - base.outerPad[0];
+				w = base.$outer.css('height','').width() - base.outerPad[0];
 				base.height = h = base.$outer.height() - base.outerPad[1];
 				base.$wrapper.add(base.$window).add(base.$items).css({ width: w, height: h });
 				base.width = pw = (o.showMultiple > 1) ? w/o.showMultiple : w;
@@ -475,7 +479,7 @@
 						w = (c.width() >= winw) ? pw : c.width(); // get width of solitary child
 						c.css('max-width', w);   // set max width for all children
 					}
-					t.css('width', w); // set width of panel
+					t.css({ width: w, height: '' }); // set width of panel
 					h = (c.length === 1 ? c.outerHeight(true) : t.height()); // get height after setting width
 					if (h <= base.outerPad[1]) { h = base.height; } // if height less than the outside padding, then set it to the preset height
 					t.css('height', h);
@@ -712,7 +716,7 @@
 				i = h.indexOf('&'),
 				n = h.match(base.regex);
 			// test for "/#/" or "/#!/" used by the jquery address plugin - $('#/') breaks jQuery
-			if (n === null && !/^#&/.test(h) && !/#!?\//.test(h)) {
+			if (n === null && !/^#&/.test(h) && !/#!?\//.test(h) && !/\=/.test(h)) {
 				// #quote2&panel1-3&panel3-3
 				h = h.substring(0, (i >= 0 ? i : h.length));
 				// ensure the element is in the same slider
@@ -783,11 +787,16 @@
 			if (playing){
 				base.clearTimer(true); // Just in case this was triggered twice in a row
 				base.timer = base.win.setInterval(function() {
-					// prevent autoplay if video is playing
-					if ( !o.isVideoPlaying(base) ) {
+					if ( !!(doc.hidden || doc.webkitHidden || doc.mozHidden || doc.msHidden) ) {
+						// stop slideshow if the page isn't visible (issue #463)
+						if (!o.autoPlayLocked) {
+							base.startStop();
+						}
+					} else if ( !o.isVideoPlaying(base) ) {
+						// prevent autoplay if video is playing
 						base.goForward(true);
-					// stop slideshow if resume if false
 					} else if (!o.resumeOnVideoEnd) {
+						// stop slideshow if resume if false
 						base.startStop();
 					}
 				}, o.delay);
@@ -913,4 +922,4 @@
 		});
 	};
 
-})(jQuery);
+})(jQuery, window, document);
