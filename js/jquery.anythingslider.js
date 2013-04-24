@@ -1,5 +1,5 @@
 /*!
-	AnythingSlider v1.8.18
+	AnythingSlider v1.9.0
 	Original by Chris Coyier: http://css-tricks.com
 	Get the latest version: https://github.com/CSS-Tricks/AnythingSlider
 
@@ -233,7 +233,7 @@
 				base.$el.find('.cloned').each(function(){
 					// disable all focusable elements in cloned panels to prevent shifting the panels by tabbing
 					$(this).find('a,input,textarea,select,button,area,form').attr({ disabled : 'disabled', name : '' });
-					$(this).find('[id]').andSelf().removeAttr('id');
+					$(this).find('[id]')[ $.fn.addBack ? 'addBack' : 'andSelf' ]().removeAttr('id');
 				});
 			}
 
@@ -265,7 +265,7 @@
 			base.$nav.find('a').eq(base.currentPage - 1).addClass('cur'); // update current selection
 
 			if (o.mode === 'fade') {
-				var t = base.$items.eq(base.currentPage-1);
+				t = base.$items.eq(base.currentPage-1);
 				if (o.resumeOnVisible) {
 					// prevent display: none;
 					t.css({ opacity: 1 }).siblings().css({ opacity: 0 });
@@ -410,7 +410,7 @@
 						base.startStop(!base.playing);
 						base.makeActive();
 						if (base.playing && !o.autoPlayDelayed) {
-							base.goForward(true);
+							base.goForward(true, o.playRtl);
 						}
 					}
 					e.preventDefault();
@@ -445,7 +445,7 @@
 		base.setDimensions = function(){
 
 			// reset element width & height
-			base.$wrapper.find('.anythingWindow, .anythingBase, .panel').andSelf().css({ width: '', height: '' });
+			base.$wrapper.find('.anythingWindow, .anythingBase, .panel')[ $.fn.addBack ? 'addBack' : 'andSelf' ]().css({ width: '', height: '' });
 			base.width = base.$el.width();
 			base.height = base.$el.height();
 			base.outerPad = [ base.$wrapper.innerWidth() - base.$wrapper.width(), base.$wrapper.innerHeight() - base.$wrapper.height() ];
@@ -526,13 +526,13 @@
 			return [w,h];
 		};
 
-		base.goForward = function(autoplay) {
+		base.goForward = function(autoplay, rtl) {
 			// targetPage changes before animation so if rapidly changing pages, it will have the correct current page
-			base.gotoPage(base[ o.allowRapidChange ? 'targetPage' : 'currentPage'] + o.changeBy * (o.playRtl ? -1 : 1), autoplay);
+			base.gotoPage(base[ o.allowRapidChange ? 'targetPage' : 'currentPage'] + o.changeBy * (rtl ? -1 : 1), autoplay);
 		};
 
 		base.goBack = function(autoplay) {
-			base.gotoPage(base[ o.allowRapidChange ? 'targetPage' : 'currentPage'] + o.changeBy * (o.playRtl ? 1 : -1), autoplay);
+			base.gotoPage(base[ o.allowRapidChange ? 'targetPage' : 'currentPage'] - o.changeBy, autoplay);
 		};
 
 		base.gotoPage = function(page, autoplay, callback, time) {
@@ -553,7 +553,6 @@
 					page = o.stopAtEnd ? 1 : ( o.infiniteSlides ? base.pages + page : ( o.showMultiple > 1 - page ? 1 : adj ) );
 				}
 				if (page > base.pages) {
-					// 
 					page = o.stopAtEnd ? base.pages : ( o.showMultiple > 1 - page ? 1 : page -= adj );
 				} else if (page >= adj) {
 					// show multiple adjustments
@@ -570,7 +569,7 @@
 
 			// pause YouTube videos before scrolling or prevent change if playing
 			if (autoplay && o.isVideoPlaying(base)) { return; }
-
+			if (o.stopAtEnd && !o.infiniteSlides && page > base.pages - o.showMultiple) { page = base.pages - o.showMultiple + 1; } // fixes #515
 			base.exactPage = page;
 			if (page > base.pages + 1 - base.adj) { page = (!o.infiniteSlides && !o.stopAtEnd) ? 1 : base.pages; }
 			if (page < base.adj ) { page = (!o.infiniteSlides && !o.stopAtEnd) ? base.pages : 1; }
@@ -812,7 +811,7 @@
 						}
 					} else if ( !o.isVideoPlaying(base) ) {
 						// prevent autoplay if video is playing
-						base.goForward(true);
+						base.goForward(true, o.playRtl);
 					} else if (!o.resumeOnVideoEnd) {
 						// stop slideshow if resume if false
 						base.startStop();
@@ -908,9 +907,11 @@
 
 		// Video
 		resumeOnVideoEnd    : true,      // If true & the slideshow is active & a supported video is playing, it will pause the autoplay until the video is complete
-		resumeOnVisible     : true,      // If true the video will resume playing (if previously paused, except for YouTube iframe - known issue); if false, the video remains paused.
-		addWmodeToObject    : "opaque",  // If your slider has an embedded object, the script will automatically add a wmode parameter with this setting
+		resumeOnVisible     : true,      // If true the video will resume playing, if previously paused; if false, the video remains paused.
 		isVideoPlaying      : function(base){ return false; } // return true if video is playing or false if not - used by video extension
+
+		// deprecated - use the video extension wmode option now
+		// addWmodeToObject : "opaque"   // If your slider has a video supported by the extension, the script will automatically add a wmode parameter with this setting
 
 	};
 
