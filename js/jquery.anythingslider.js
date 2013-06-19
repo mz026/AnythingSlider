@@ -193,17 +193,18 @@
 			o.navigationSize = (o.navigationSize === false) ? 0 : parseInt(o.navigationSize,10) || 0;
 
 			// Fix tabbing through the page, but don't change the view if the link is in view (showMultiple = true)
-			base.$items.find('a').unbind('focus.AnythingSlider').bind('focus.AnythingSlider', function(e){
-				var panel = $(this).closest('.panel'),
-					indx = base.$items.index(panel) + base.adj; // index can be -1 in nested sliders - issue #208
-				base.$items.find('.focusedLink').removeClass('focusedLink');
-				$(this).addClass('focusedLink');
-				base.$window.scrollLeft(0).scrollTop(0);
-				if ( ( indx !== -1 && (indx >= base.currentPage + o.showMultiple || indx < base.currentPage) ) ) {
-					base.gotoPage(indx);
-					e.preventDefault();
-				}
-			});
+      // comment out to fix ie <= 9
+			// base.$items.find('a').unbind('focus.AnythingSlider').bind('focus.AnythingSlider', function(e){
+			// 	var panel = $(this).closest('.panel'),
+			// 		indx = base.$items.index(panel) + base.adj; // index can be -1 in nested sliders - issue #208
+			// 	base.$items.find('.focusedLink').removeClass('focusedLink');
+			// 	$(this).addClass('focusedLink');
+			// 	base.$window.scrollLeft(0).scrollTop(0);
+			// 	if ( ( indx !== -1 && (indx >= base.currentPage + o.showMultiple || indx < base.currentPage) ) ) {
+			// 		base.gotoPage(indx);
+			// 		e.preventDefault();
+			// 	}
+			// });
 			if (o.showMultiple > 1) {
 				if (o.showMultiple > base.pages) { o.showMultiple = base.pages; }
 				base.adjustMultiple = (o.infiniteSlides && base.pages > 1) ? 0 : o.showMultiple - 1;
